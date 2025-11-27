@@ -1,16 +1,19 @@
-name: SonarQube
+name: SonarQube C# Analysis
 on:
   push:
     branches:
       - master
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   build:
-    name: Build and analyze
-    runs-on: ubuntu-latest
+    name: Build and analyze C#
+    runs-on: windows-latest
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       
@@ -26,26 +29,47 @@ jobs:
           dotnet-version: '9.0.x'
       
       - name: Temporarily update global.json for CI
+        shell: pwsh
         run: |
           cd analyzers
-          jq '.sdk.version = "9.0.100"' global.json > global.json.tmp && mv global.json.tmp global.json
-          cat global.json
+          $json = Get-Content global.json | ConvertFrom-Json
+          $json.sdk.version = "9.0.100"
+          $json | ConvertTo-Json | Set-Content global.json
+          Write-Host "Updated global.json:"
+          Get-Content global.json
       
       - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:
-          path: ~/.sonar/cache
+          path: ~\sonar\cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
       
-      - name: Cache Maven packages
+      - name: Cache SonarQube scanner
+        id: cache-sonar-scanner
         uses: actions/cache@v4
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          path: ${{ runner.temp }}\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+      
+      - name: Install SonarQube scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory -Force
+          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
       
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=vikrant1717_sonar-dotnet -Dsonar.organization=vikrant1717 -Dsonar.host.url=https://sonarcloud.io
+        shell: pwsh
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin `
+            /k:"vikrant1717_sonar-dotnet" `
+            /o:"vikrant1717" `
+            /d:sonar.host.url="https://sonarcloud.io"
+          
+          dotnet build analyzers\SonarAnalyzer.sln --configuration Release
+          
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end
