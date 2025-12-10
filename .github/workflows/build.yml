@@ -27,6 +27,21 @@ jobs:
         run: |
           dotnet tool update --global dotnet-sonarscanner
 
+      - name: Find solution or project file
+        id: find-file
+        shell: pwsh
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          $proj = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
+
+          if ($sln) {
+            Write-Output "solution=$($sln.FullName)" >> $env:GITHUB_OUTPUT
+          } elseif ($proj) {
+            Write-Output "solution=$($proj.FullName)" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Error "No .sln or .csproj file found in the repository."
+          }
+
       - name: Sonar begin
         shell: pwsh
         env:
@@ -38,8 +53,9 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Light Build (Required by Sonar)
-        run: dotnet build --no-incremental
+      - name: Build (required for Sonar)
+        shell: pwsh
+        run: dotnet build "${{ steps.find-file.outputs.solution }}" --no-incremental
 
       - name: Sonar end
         shell: pwsh
