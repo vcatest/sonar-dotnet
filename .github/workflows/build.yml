@@ -1,4 +1,4 @@
-name: SonarQube C# Analysis
+name: SonarQube C# Analysiss
 
 on:
   push:
