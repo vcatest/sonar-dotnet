@@ -1,10 +1,10 @@
-name: SonarQube C# Analysiss
+name: SonarQube C# Analysis
 
 on:
   push:
     branches: [ master ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 
 jobs:
   sonar-scan:
@@ -35,9 +35,9 @@ jobs:
           $proj = Get-ChildItem -Recurse -Filter *.csproj | Select-Object -First 1
 
           if ($sln) {
-            Write-Output "solution=$($sln.FullName)" >> $env:GITHUB_OUTPUT
+            "solution=$($sln.FullName)" >> $env:GITHUB_OUTPUT
           } elseif ($proj) {
-            Write-Output "solution=$($proj.FullName)" >> $env:GITHUB_OUTPUT
+            "solution=$($proj.FullName)" >> $env:GITHUB_OUTPUT
           } else {
             Write-Error "No .sln or .csproj file found in the repository."
           }
@@ -47,10 +47,11 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner begin `
+          dotnet sonarscanner begin `
             /k:"vikrant1717_sonar-dotnet" `
             /o:"vikrant1717" `
             /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.inclusions="**/*.cs" `
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
 
       - name: Build (required for Sonar)
@@ -62,5 +63,5 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          dotnet-sonarscanner end `
+          dotnet sonarscanner end `
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
