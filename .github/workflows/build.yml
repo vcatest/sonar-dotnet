@@ -48,8 +48,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet sonarscanner begin `
-            /k:"vikrant1717_sonar-dotnet" `
-            /o:"vikrant1717" `
+            /k:"vcatest_sonar-dotnet2" `
+            /o:"vcatest" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.inclusions="**/*.cs" `
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
